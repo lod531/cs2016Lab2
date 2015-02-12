@@ -17,7 +17,7 @@ exit(1);                                     \
 }                                              \
 }
 
-#define					OVERFLOW_CEILING	20
+#define					OVERFLOW_CEILING	10
 #define                 NUMTHREADS     2
 pthread_mutex_t         dataMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t          dataPresentCondition = PTHREAD_COND_INITIALIZER;
@@ -34,6 +34,7 @@ void *theConsumer(void *threadid)
 
 		if(sharedData <= 0)
 		{
+			printf("UNDERFLOW AVERTED\n");
 			pthread_cond_wait(&dataPresentCondition, &dataMutex);
 		}
 
@@ -42,7 +43,8 @@ void *theConsumer(void *threadid)
 		printf("Consuming 1 data unit.\n");
 		pthread_mutex_unlock(&dataMutex);
 		pthread_cond_signal(&dataConsumedCondition);
-		sleep(2);	//consuming data
+		rintf("The number of data items in stack: %d\n", sharedData)
+		sleep(5);	//consuming data
 	}
 }
 
@@ -56,6 +58,7 @@ void *theProducer(void * producerID)
 
 		if(sharedData >= OVERFLOW_CEILING)
 		{
+			printf("OVERFLOW AVERTED\n");
 			pthread_cond_wait(&dataConsumedCondition, &dataMutex);
 		}
 
@@ -64,7 +67,9 @@ void *theProducer(void * producerID)
 		printf("Produced 1 data unit.\n");
 		pthread_mutex_unlock(&dataMutex);
 		pthread_cond_signal(&dataPresentCondition);
-		sleep(3);	//producing data
+
+		printf("The number of data items in stack: %d\n", sharedData)
+		sleep(1);	//producing data
 	}
 	return NULL;
 }
@@ -72,25 +77,25 @@ void *theProducer(void * producerID)
 int main(int argc, char **argv)
 {
 	pthread_t             consumers[NUMTHREADS];
-	int                   i;
+	long long             i;
 	
 	sharedData = 0;
-	pthread_t producer = pthread_create(producer, NULL, theproducer, (void *)i);
+	pthread_t producer = pthread_create(&producer, NULL, theProducer, NULL);
 
 	for(i=0; i < NUMTHREADS; i++)
 	{
-		pthread_create(&threads[t], NULL, theConsumer)
+		pthread_create(&consumers[i], NULL, theConsumer, (void *) i);
 	}
 	
 	printf("Wait for the threads to complete, and release their resources\n");
 	for (i=0; i <NUMTHREADS; ++i) {
-		rc = pthread_join(thread[i], NULL);
-		checkResults("pthread_join()\n", rc);
+		pthread_join(consumers[i], NULL);
 	}
 	
 	printf("Clean up\n");
-	rc = pthread_mutex_destroy(&dataMutex);
-	rc = pthread_cond_destroy(&dataPresentCondition);
+	pthread_mutex_destroy(&dataMutex);
+	pthread_cond_destroy(&dataPresentCondition);
+	pthread_cond_destroy(&dataConsumedCondition);
 	printf("Main completed\n");
 	return 0;
 }
