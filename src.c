@@ -17,87 +17,69 @@ exit(1);                                     \
 }                                              \
 }
 
+#define					OVERFLOW_CEILING	20
 #define                 NUMTHREADS     2
 pthread_mutex_t         dataMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t          dataPresentCondition = PTHREAD_COND_INITIALIZER;
-int                     dataPresent=0;
-int                     sharedData=0;
+pthread_cond_t 			dataConsumedCondition = PTHREAD_COND_INITIALIZER;
+int sharedData;
 
-void *theThread(void *threadid)
-{
-	int   rc;
-	
-	printf("Consumer Thread %.8x: Entered\n",(int)threadid);
-	rc = pthread_mutex_lock(&dataMutex);
-	checkResults("pthread_mutex_lock()\n", rc);
-	
-	while (TRUE) {
-		/* The boolean dataPresent value is required for safe use of */
-		/* condition variables. If no data is present we wait, other */
-		/* wise we process immediately.                              */
-		while (!dataPresent) {
-			printf("Consumer Thread %.8x: Wait for data to be produced\n",(int)threadid);
-			rc = pthread_cond_wait(&dataPresentCondition, &dataMutex);
-			if (rc) {
-				printf("Consumer Thread %.8x: condwait failed, rc=%d\n",(int)threadid,rc);
-				pthread_mutex_unlock(&dataMutex);
-				exit(1);
-			}
+void *theConsumer(void *threadid)
+{ 
+	while(1)
+	{
+		printf("Consumer locking dataMutex.\n");
+		pthread_mutex_lock(&dataMutex);
+		printf("Acquired lock.\n");
+
+		if(sharedData <= 0)
+		{
+			pthread_cond_wait(&dataPresentCondition, &dataMutex);
 		}
-		printf("Consumer Thread %.8x: Found data or Notified, "
-			   "CONSUME IT while holding lock\n",
-			   (int)threadid);
-		/* Typically an application should remove the data from being    */
-		/* in the shared structure or Queue, then unlock. Processing     */
-		/* of the data does not necessarily require that the lock is held */
-		/* Access to shared data goes here */
-		--sharedData;
-		/* We consumed the last of the data */
-		if (sharedData==0) {dataPresent=0;}
-		/* Repeat holding the lock. pthread_cond_wait releases it atomically */
+
+		sharedData--;
+
+		printf("Consuming 1 data unit.\n");
+		pthread_mutex_unlock(&dataMutex);
+		pthread_cond_signal(&dataConsumedCondition);
+		sleep(2);	//consuming data
 	}
-	printf("Consumer Thread %.8x: All done\n",(int)threadid);
-	rc = pthread_mutex_unlock(&dataMutex);
-	checkResults("pthread_mutex_unlock()\n", rc);
+}
+
+void *theProducer(void * producerID)
+{
+	while(1)
+	{
+		printf("Producer locking dataMutex.\n");
+		pthread_mutex_lock(&dataMutex);
+		printf("Acquired lock.\n");
+
+		if(sharedData >= OVERFLOW_CEILING)
+		{
+			pthread_cond_wait(&dataConsumedCondition, &dataMutex);
+		}
+
+		sharedData++;
+
+		printf("Produced 1 data unit.\n");
+		pthread_mutex_unlock(&dataMutex);
+		pthread_cond_signal(&dataPresentCondition);
+		sleep(3);	//producing data
+	}
 	return NULL;
 }
 
 int main(int argc, char **argv)
 {
-	pthread_t             thread[NUMTHREADS];
-	int                   rc=0;
-	int                   amountOfData=40;
+	pthread_t             consumers[NUMTHREADS];
 	int                   i;
 	
-	printf("Enter Testcase - %s\n", argv[0]);
-	
-	printf("Create/start threads\n");
-	for (i=0; i <NUMTHREADS; ++i) {
-		rc = pthread_create(&thread[i], NULL, theThread, (void *)i);
-		checkResults("pthread_create()\n", rc);
-	}
-	
-	/* The producer loop */
-	while (amountOfData--) {
-		printf("Producer: 'Finding' data\n");
-		sleep(3);
-		
-		rc = pthread_mutex_lock(&dataMutex);   /* Protect shared data and flag  */
-		checkResults("pthread_mutex_lock()\n", rc);
-		printf("Producer: Make data shared and notify consumer\n");
-		++sharedData;                          /* Add data                      */
-		dataPresent=1;                         /* Set boolean predicate         */
-		
-		rc = pthread_cond_signal(&dataPresentCondition); /* wake up a consumer  */
-		if (rc) {
-			pthread_mutex_unlock(&dataMutex);
-			printf("Producer: Failed to wake up consumer, rc=%d\n", rc);
-			exit(1);
-		}
-		
-		printf("Producer: Unlock shared data and flag\n");
-		rc = pthread_mutex_unlock(&dataMutex);
-		checkResults("pthread_mutex_lock()\n",rc);
+	sharedData = 0;
+	pthread_t producer = pthread_create(producer, NULL, theproducer, (void *)i);
+
+	for(i=0; i < NUMTHREADS; i++)
+	{
+		pthread_create(&threads[t], NULL, theConsumer)
 	}
 	
 	printf("Wait for the threads to complete, and release their resources\n");
@@ -112,3 +94,5 @@ int main(int argc, char **argv)
 	printf("Main completed\n");
 	return 0;
 }
+
+//\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n
