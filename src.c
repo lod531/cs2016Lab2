@@ -32,7 +32,7 @@ void *theConsumer(void *threadid)
 		pthread_mutex_lock(&dataMutex);
 		printf("Acquired lock.\n");
 
-		if(sharedData <= 0)
+		while(sharedData <= 0)
 		{
 			printf("UNDERFLOW AVERTED\n");
 			pthread_cond_wait(&dataPresentCondition, &dataMutex);
@@ -56,7 +56,7 @@ void *theProducer(void * producerID)
 		pthread_mutex_lock(&dataMutex);
 		printf("Acquired lock.\n");
 
-		if(sharedData >= OVERFLOW_CEILING)
+		while(sharedData >= OVERFLOW_CEILING)
 		{
 			printf("OVERFLOW AVERTED\n");
 			pthread_cond_wait(&dataConsumedCondition, &dataMutex);
