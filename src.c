@@ -43,7 +43,7 @@ void *theConsumer(void *threadid)
 		printf("Consuming 1 data unit.\n");
 		pthread_mutex_unlock(&dataMutex);
 		pthread_cond_signal(&dataConsumedCondition);
-		rintf("The number of data items in stack: %d\n", sharedData)
+		printf("The number of data items in stack: %d\n", sharedData);
 		sleep(5);	//consuming data
 	}
 }
@@ -68,7 +68,7 @@ void *theProducer(void * producerID)
 		pthread_mutex_unlock(&dataMutex);
 		pthread_cond_signal(&dataPresentCondition);
 
-		printf("The number of data items in stack: %d\n", sharedData)
+		printf("The number of data items in stack: %d\n", sharedData);
 		sleep(1);	//producing data
 	}
 	return NULL;
