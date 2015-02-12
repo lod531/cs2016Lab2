@@ -64,10 +64,6 @@ void *theThread(void *threadid)
 
 int main(int argc, char **argv)
 {
-	while(0)
-	{
-		printf("HUEHUEHUEHUE");
-	}
 	pthread_t             thread[NUMTHREADS];
 	int                   rc=0;
 	int                   amountOfData=40;
